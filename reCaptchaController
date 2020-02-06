@@ -1,0 +1,74 @@
+({
+	doInit : function(component, event, helper) {
+		helper.doInit(component);
+	},
+	
+	/* FORMATTING & VALIDATION */
+	removeDashes : function(component, event, helper) {
+		let tb = event.getSource();
+		let val = tb.get('v.value');
+		tb.set('v.value', val.replace(/ /g, '').replace(/-/g, '').replace(/%/g, '').replace(/\(/g, '').replace(/\)/g, ''));
+	},
+
+	enforceNumeric : function(component, event, helper) {
+		let charCode = (event.which) ? event.which : event.keyCode;
+		/* Prevent non-numeric entry into the field*/
+		if (charCode > 31 && (charCode < 48 || charCode > 57)) { /* NUMERIC */
+			event.preventDefault();
+			return false;
+		}
+		return true;
+	},
+
+	formatPercent : function(component, event, helper) {
+		let tb = event.getSource();
+		let val = tb.get('v.value').replace(/-/g, '');
+		let form = val + '%';
+		tb.set('v.value', form);
+	},
+
+	formatPhone : function(component, event, helper) {
+		let tb = event.getSource();
+		let val = tb.get('v.value');
+		let form = (val == '' ? '' : '(' + val.substring(0,3) + ') ' + val.substring(3,6) + '-' + val.substring(6,10));
+		tb.set('v.value', form);
+		tb.reportValidity();
+	},
+
+	next : function(component, event, helper) {
+		helper.createApp(component);
+	},
+
+	handleNextClick : function(component, event, helper) {
+		helper.validatePW(component);
+        debugger;
+		//helper.validateInputs(component);
+		//helper.validateTerms(component);
+		var inputs = [component.find('fname'),
+					  component.find('lname'),
+					  component.find('em'),
+					  component.find('password1'),
+					  component.find('password2'),
+                      component.find('termsBox'),
+                      component.find('phone')
+					  ];
+		var allValid = inputs.reduce(function (validSoFar, inputCmp) {
+			inputCmp.reportValidity();
+			return validSoFar && inputCmp.checkValidity();
+		}, true);
+		if (allValid) {
+			helper.createApp(component);
+		}
+	 
+	 },
+	 openModal: function(component, event, helper) {
+	  // Set isOpen attribute to true
+	  component.set("v.isOpen", true);
+	 },
+	 closeModal: function(component, event, helper) {
+	  // Set isOpen attribute to false  
+	  component.set("v.isOpen", false);
+   },
+	
+
+})
