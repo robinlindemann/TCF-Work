@@ -1,0 +1,207 @@
+/** Apex controller called by the DCE_ReCaptchaVF page **/
+
+public with sharing class RecaptchaCtrl {
+	/*
+	public String res {get; set;}
+	
+	public String response  { 
+		get {
+			return ApexPages.currentPage().getParameters().get('g-recaptcha-response');
+		}
+	} 
+	*/
+	public String siteKey {get; set;}
+	
+	public RecaptchaCtrl() {
+		List<ReCaptcha_Setting__mdt> googleSettings = [Select PublicKey__c From ReCaptcha_Setting__mdt Where DeveloperName = 'GoogleSettings'];
+		siteKey = googleSettings[0].PublicKey__c;
+	}
+
+	//replaced by createApp method.
+	//Michael Lloyd - Demand Chain - 2.5.2020
+	/*
+	@AuraEnabled
+	public static String saveApp(String app, String recTypeDevName, String googleResponse, String refGuid) {
+		system.debug('app=  ' + app);
+		String appGuid = '';
+		
+		if (verifyLightning(googleResponse)) {
+			System.debug('google verified');
+			DCE_Application__c newApp = (DCE_Application__c)JSON.deserialize(app, DCE_Application__c.class);
+			
+			if (!String.isBlank(refGuid)) {
+				/* GET ACCOUNT INFO FROM ALL RECORDS */
+				/*
+				Account acct = DCE_Credit_Application_Helper.getReferrer(refGuid);
+
+				if (acct != NULL) {
+					newApp.Referrer__c = acct.Id;
+					newApp.Vendor_Name__c = acct.Name;
+					newApp.Vendor_Address__c = acct.ShippingStreet;
+					newApp.Vendor_City__c = acct.ShippingCity;
+					newApp.Vendor_State__c = acct.ShippingState;
+					newApp.Vendor_Postal_Code__c = acct.ShippingPostalCode;
+					newApp.Vendor_Email__c = acct.Email__c;
+					newApp.Vendor_Phone__c = acct.Phone;
+					newApp.Vendor_Fax__c = acct.Fax;
+				}
+			}
+
+			//set record type on app record
+			//List<RecordType> appRecType = [Select Id From RecordType Where DeveloperName = :recTypeDevName Limit 1];
+			newApp.RecordTypeId = Schema.SObjectType.DCE_Application__c.getRecordTypeInfosByName().get(recTypeDevName).getRecordTypeId();
+			
+			//if recordtype is individual, copy over fields
+			if (recTypeDevName == 'Individual'){
+				newApp.Email__c = newApp.Contact_Email_Address__c;
+				newApp.First_Name__c = newApp.Contact_First_Name__c;
+				newApp.Last_Name__c = newApp.Contact_Last_Name__c;
+				newApp.Phone__c = newApp.Contact_Phone__c;
+			}
+			newApp.External_Application__c=True;
+			//insert newApp;
+
+			DCE_Credit_Application_Helper.createApp(newApp);
+
+			System.debug('newAppId: ' + newApp.Id);
+			
+			//create a new child DCE_Application_Entity__c record
+			DCE_Application_Entity__c newEntity = new DCE_Application_Entity__c();
+			newEntity.DCE_Application__c = newApp.Id;
+			
+			//create app entity in 'without-sharing' helper class 
+			DCE_Credit_Application_Helper.createAppEntity(newEntity);
+			
+			//query for guid
+			List<DCE_Application__c> appWithGuid = [Select Id, GUID__c From DCE_Application__c Where Id = :newApp.Id];
+			appGuid = appWithGuid[0].GUID__c;
+		} 
+		
+		return appGuid;
+	}
+	*/
+	@AuraEnabled
+	public static String createApp(String googleResponse, String fName, String lName, String email, String phone, String pw1, String pw2, String refGuid, String recType) {
+		String appGuid = '';
+
+		//RE-VALIDATE PASSWORD
+		if (pw1 == pw2) {
+		
+			if (verifyLightning(googleResponse)) {
+				DCE_Application__c nApp = new DCE_Application__c(
+					External_Application__c = True,
+					RecordTypeId = Schema.SObjectType.DCE_Application__c.getRecordTypeInfosByName().get(recType).getRecordTypeId(),
+					Contact_First_Name__c = fName,
+					Contact_Last_Name__c = lName,
+					Contact_Email_Address__c = email,
+					Contact_Phone__c = phone,
+					Password__c = pw1,
+					Confirm_Password__c = pw2
+				);
+				
+				//if recordtype is individual, copy over fields
+				if (recType == 'Individual'){
+					nApp.First_Name__c = fName;
+					nApp.Last_Name__c = lName;
+					nApp.Email__c = email;
+					nApp.Phone__c = phone;
+				}
+
+				//REFERRER
+				if (!String.isBlank(refGuid)) {
+					Account acct = DCE_Credit_Application_Helper.getReferrer(refGuid);
+
+					if (acct != NULL) {
+						nApp.Referrer__c = acct.Id;
+						nApp.Vendor_Name__c = acct.Name;
+						nApp.Vendor_Address__c = acct.ShippingStreet;
+						nApp.Vendor_City__c = acct.ShippingCity;
+						nApp.Vendor_State__c = acct.ShippingState;
+						nApp.Vendor_Postal_Code__c = acct.ShippingPostalCode;
+						nApp.Vendor_Email__c = acct.Email__c;
+						nApp.Vendor_Phone__c = acct.Phone;
+						nApp.Vendor_Fax__c = acct.Fax;
+					}
+				}
+
+				//CREATE THE APPLICATION
+				DCE_Credit_Application_Helper.createApp(nApp);
+				
+				//create a new child DCE_Application_Entity__c record
+				DCE_Application_Entity__c nEntity = new DCE_Application_Entity__c();
+				nEntity.DCE_Application__c = nApp.Id;
+
+				DCE_Credit_Application_Helper.createAppEntity(nEntity);
+				
+				
+
+				//query for guid
+				List<DCE_Application__c> app = [Select Id, GUID__c From DCE_Application__c Where Id = :nApp.Id];
+				appGuid = app[0].GUID__c;
+			}
+
+		}
+		return appGuid;
+	}
+
+	public static Boolean verifyLightning(final String response) { 
+		System.debug('response: ' + response);   
+		List<ReCaptcha_Setting__mdt> googleSettings = [Select Endpoint__c, PrivateKey__c From ReCaptcha_Setting__mdt Where DeveloperName = 'GoogleSettings'];
+		String privateKey = googleSettings[0].PrivateKey__c;
+		String baseUrl = googleSettings[0].Endpoint__c;
+			final HttpResponse r = makeRequest(baseUrl,
+			'secret=' + privateKey + 
+			'&response='  + response);
+		System.debug('response: ' + r);
+		String res = null;
+		if (test.isRunningTest()) {
+			res = '{ "success": true, "challenge_ts": "2018-11-14T05:47:06Z", "hostname": "partial18-myinstance.cs90.force.com" }';
+		} else { 
+			res = r.getBody();
+		}        
+		if ( res != null ) {
+			JSONParser parser = JSON.createParser(res);
+			while (parser.nextToken() != null) {
+				if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+						(parser.getText() == 'success')) {
+   // Get the value.
+					parser.nextToken();
+					return parser.getBooleanValue();
+				}
+			}
+		} 
+		return false;
+	}
+	
+/* Private helper methods */
+	
+	private static HttpResponse makeRequest(string url, string body)  {
+		HttpResponse response = null;
+		HttpRequest req = new HttpRequest();   
+		req.setEndpoint(url);
+		req.setMethod('POST');
+		req.setBody (body);
+		try {
+			Http http = new Http();
+			response = http.send(req);
+			System.debug('reCAPTCHA response: ' + response);
+			System.debug('reCAPTCHA body: ' + response.getBody());
+		} catch(System.Exception e) {
+			System.debug('ERROR: ' + e);
+		}
+		return response;
+	}   
+		
+	
+	@TestVisible
+	private static String remoteHost(final Map<String, String> hdrs) { 
+			String ret = '127.0.0.1';
+			// also could use x-original-remote-host 
+			if (hdrs.get('x-original-remote-addr')!= null)
+				ret =  hdrs.get('x-original-remote-addr');
+			else if (hdrs.get('X-Salesforce-SIP')!= null)
+				ret =  hdrs.get('X-Salesforce-SIP');
+			return ret;
+	}
+	
+}
