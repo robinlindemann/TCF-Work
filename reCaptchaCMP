@@ -1,0 +1,401 @@
+<aura:component controller="RecaptchaCtrl" implements="flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes" access="global">
+    <aura:attribute name="reCaptchaMessage" type="String" />
+    <aura:attribute name="showNext" type="Boolean" default="false" />
+    <aura:attribute name="isOpen" type="boolean" default="false"/>
+    <aura:attribute name="appRecType" type="String"/>
+    <aura:attribute name="newApp" type="DCE_Application__c" default="{'sobjectType':'DCE_Application__c'}"/>
+    <aura:attribute name="password1" type="String"/>
+	<aura:attribute name="password2" type="String"/>
+        
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:registerEvent name="newCreditAppEvent" type="c:DCE_NewCreditAppEvent"/>
+    
+       <div class="steps">
+        <div class="step-content ">
+            <!--BEGIN PAGE HEADER/SUBHEADER SECTION-->
+            <div class="step-header-section slds-align_absolute-center" style="width:500px">
+                <h1> Let's Get Started! </h1></div>
+             <div class="step-header-section slds-align_absolute-center" style="width:600px">
+                <h2> Please provide primary contact information below and create a password that will allow you to re-visit 
+                    this application if needed prior to final submission.  This information will also be used to contact
+                    you throughout the application process with any questions.</h2>
+                 <br/>
+            </div>
+            
+            <!--END PAGE HEADER/SUBHEADER SECTION-->
+            
+            <!--BEGIN INPUT FIELD FORM SECTION - FIRST NAME, LAST NAME, EMAIL, PHONE, PASSWORD & VERIFY PASSWORD-->
+            <div class="step-content-section slds-align_absolute-center" style="width:304px">
+                
+                <form class="slds-form--stacked">
+                    <div class="slds-form-element__control" style="width:304px">
+                      <lightning:input name="firstName" label="First Name"
+                                         aura:id="fname"
+                                         value="{!v.newApp.Contact_First_Name__c}"
+                                         maxlength="40"
+                                         required="true"
+                                         messageWhenValueMissing="Please enter First Name"/>
+                                         
+                    <lightning:input name="lastName" label="Last Name"
+                                         aura:id="lname"
+                                         value="{!v.newApp.Contact_Last_Name__c}"
+                                         maxlength="40"
+                                         required="true"
+                                     	 messageWhenValueMissing="Please enter Last Name"/>
+                   <lightning:input name="email" label="Email"
+                                         aura:id="em"
+                                         type="email"
+                                         value="{!v.newApp.Contact_Email_Address__c}"
+                                         required="true"
+                                   		 messageWhenTypeMismatch="Please enter valid email address"
+                                    	 messageWhenValueMissing="Please enter valid email address"/>
+                   <span onkeypress="{!c.enforceNumeric}">
+                   <lightning:input name="tel" label="Phone"
+                                             aura:id="phone"
+                                             type="tel"
+                                             value="{!v.newApp.Contact_Phone__c}"
+                                             pattern="((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}" 
+                                             minlength="10" 
+                                             maxlength="10" 
+                                             onfocus="{!c.removeDashes}" 
+                                             onblur="{!c.formatPhone}"
+                                             required="true"
+                                    		 messageWhenValueMissing="Please enter a valid Phone Number (10 digits no dashes)"
+                                    		 messageWhenPatternMismatch="Please enter a valid Phone Number (10 digits no dashes)"/>
+                      </span>
+                      <lightning:input name="pw" label="Password"
+                                         aura:id="pwd1"
+                                         type="password"
+                                         pattern="((?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W]).{8,100})"
+                                         value="{!v.password1}"
+                                         required="true"
+                                       	 messageWhenValueMissing="Please enter a password with at least 1 uppercase letter, 1 lowercase letter,
+                                                                     1 number, one special character and must be at least 8 characters"
+                                         messageWhenPatternMismatch="Please update password to include at least 1 uppercase letter, 1 lowercase letter,
+                                                                     1 number, one special character and must be at least 8 characters"/>
+                     <lightning:input name="cPW" label="Confirm Password"
+                                         aura:id="pwd2"
+                                         type="password"
+                                         pattern="((?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W]).{8,100})"
+                                         value="{!v.password2}"
+                                         required="true"
+                                      	 messageWhenValueMissing="Please enter a password with at least 1 uppercase letter, 1 lowercase letter,
+                                                                     1 number, one special character and must be at least 8 characters"
+                                         messageWhenPatternMismatch="Please update password to include at least 1 uppercase letter, 1 lowercase letter,
+                                                                     1 number, one special character and must be at least 8 characters"/>
+                   </div>
+                   <!--END INPUT FIELD FORM SECTION-->
+                    <br/>
+                    <!--BEGIN IFRAME/RECAPTCHA WIDGET SECTION -->
+                    <div class="step-content-section slds-align_absolute-center">
+                        <div class="slds-form-element__control" style="width: 100%;" align="center" >
+                            <iframe aura:id="vfFrame" src="https://dev-tcfef.cs20.force.com/CreditApp/DCE_ReCaptchaVF" scrolling="no" frameborder="0"
+                                    allowtransparency="true" width="100%" height="500px"  />
+                        </div>
+                    </div>
+                    <!--END RECAPTCHA WIDGET SECTION -->
+                    
+                    <!--BEGIN SITE TERMS OF USE AND NEXT SECTION -->
+                    <div class="step-content-section">
+                        <aura:if isTrue="{!v.showNext}">
+                            <!--SPLIT CHECKBOX COMPONENT INTO TWO SECTIONS (BOX & TEXT) TO ACCOMODATE TEXT LINK/ACTION FOR POPUP-->
+                            
+                            <div align="center" >
+                                <lightning:layoutItem  >
+                                    <lightning:input aura:id="termsBox" type="checkbox" checked="{!v.newApp.Site_Terms_of_Use_Accepted__c}" required="true" 
+                                                     label="I understand that I am electronically agreeing to the Site Terms of Use for this application."  messageWhenValueMissing="Please accept terms of use"  />
+                                </lightning:layoutItem></div>
+                           
+                            <div align="center" >
+                                <h4>Click <lightning:button variant="base" label=" here " onclick="{! c.openModal }"/> to view full site terms of use.
+                                </h4>
+                           </div>
+                            <br/>
+                           <!--NEXT BUTTON-->
+                            <div align="center" >
+                                <h6><lightning:button label="Next" variant="brand" title="I electronically agree to the terms of use for this application." onclick="{!c.handleNextClick}"/>
+                                    </h6>
+                            </div>
+                        </aura:if>
+                    </div>
+                    <!--END SITE TERMS OF USE AND NEXT SECTION -->
+                </form>  
+            </div>
+        </div>
+        
+        
+    </div>
+    <!--BEGIN POP-UP MODAL-->
+    <div class="slds-m-around_xx-large">
+    <!--Use aura:if tag to open Modal, when text link is clicked -->   
+        <aura:if isTrue="{!v.isOpen}">
+            
+            <!--###### MODAL BOX Start######--> 
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Start ######-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Terms of Use – Effective 3-29-2019</h2>
+                    </header>
+                    <!--###### MODAL BOX BODY Part Start######-->
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p>To access TCF’s Wholesale Digital Services, you must first agree to these Terms and Conditions of Use (the "Terms") by following the on-screen 
+                            directions to indicate your agreement. In addition, each time you use the Digital Services, you confirm that you accept the Terms. If you agree to 
+                            these Terms, you represent and agree that you are an authorized representative of each Customer (defined below) whose Wholesale Product and Service 
+                            information you will be accessing through the Digital Services and are authorized to agree to these Terms on behalf of such Customer; and you 
+                            understand that you will be obligating yourself and each such Customer to these Terms. We recommend that you download or print these Terms and keep 
+                            a copy for future reference. You also can access the current Terms through the link found at the bottom of each page of the Digital Services. 
+                            Please note that use of TCF’s Digital Services also is governed by the Banking Contract (defined below) between TCF and the Customer for each of the 
+                            applicable Wholesale Products and Services and in the event of a direct conflict between these Terms and the applicable Banking Contract, the terms of 
+                            the Banking Contract will control.</p>
+                        
+                        <h1>Definitions</h1>
+                        <p>The following definitions apply in these Terms:<br/>
+                         “Affiliate” means any company that owns TCF National Bank, is owned directly or indirectly by us, or is under common ownership with us.<br/>
+                         “Alerts and Reminders” means alerts and reminder messages as described in the section called “Alerts and Reminders.” <br/>
+                         “Banking Contract” means each of the agreements, schedules, disclosures, and other documents governing your Wholesale Products and Services; and (2) any other terms and 
+                            conditions governing use of your Wholesale Products and Services. <br/>
+                         “Communications” means all account opening documents, statements, disclosures, notices, messages, records, change in terms notices, overdraft notices, tax notices,
+                            Alerts and Reminders, and other information that we may provide or make available to you concerning your Wholesale Products and Services or the Digital Services. <br/>
+                         “Customer" means the owner, depositor, borrower, lessee or other obligor, as applicable, under the Banking Contract governing the Wholesale Products and Services for which you use of 
+                            the Digital Services. The Customer typically (but not always) will be a legal entity on whose behalf the individual using the Digital Services is acting. <br/>
+                        "Digital Services” means the digital services we provide through any internet banking site and/or any mobile application maintained by TCF or a TCF-Related Party,
+                            as modified from time to time, relating to any Wholesale Product or Service. <br/>
+                         “Password” means the combination of numbers, letters, and symbols you select for the purpose of authenticating yourself when accessing the Digital Services.<br/>
+                         “Technology Provider” means a third party provider of content or technology services necessary to operate the Digital Services. <br/>
+                        "Terms" means these Terms and Conditions of Use, as updated from time to time. <br/>
+                         “TCF,” “we,” “us,” and “our” mean TCF National Bank, and/or, as applicable, each TCF Affiliate that provides Wholesale Products and Services to you. <br/>
+                         “TCF-Related Parties” means: (1) TCF; (2) TCF’s employees, officers and directors; (3) TCF’s Affiliates; (4) TCF’s agents, licensors, independent contractors and subcontractors;
+                            and (5) third party service providers that the TCF-Related Parties use. <br/>
+                         “You” and “your” mean the Customer for which you use of the Digital Services and also each individual who is using the Digital Services on behalf of such Customer.<br/>
+                        "Wholesale Products and Services" means checking, savings, money market and time deposit accounts provided by TCF Commercial Bank and the treasury management services relating to these accounts, loans, leases
+                            and other financing products provided by TCF or any TCF Affiliate for business purposes and any other wholesale banking product or service provided for business purposes.</p>
+                        
+                        <h1>Use of the Digital Services</h1>
+                        <p>The Digital Services are solely for your convenience. You may not redistribute or resell them, or use them to process transactions for third parties. You may not use the Digital Services
+                            or any Wholesale Product or Service for any illegal purposes. You will comply with all regulations, policies and procedures of networks through which you access and use the Digital Services.
+                            The Digital Services are not real time.</p>
+                        
+                        <h1>Changes to the Terms or the Digital Services</h1>
+                        <p>We may change these Terms or the Digital Services from time to time by: (1) adding new terms, conditions, services, charges, or fees; (2) modifying or discontinuing existing terms, conditions, 
+                            services, charges, or fees; (3) changing the Wholesale Products and Services that are eligible for the Digital Services; (4) changing the hardware and software requirements necessary to access
+                            the Digital Services; and (5) changing the security requirements necessary to access the Digital Services. If these Terms change, you will be required to accept the revised terms to continue
+                            accessing the Digital Services. All changes to these Terms or the Digital Services take effect immediately when we make such changes available through the Digital Services, unless we provide a 
+                            notice that states otherwise. By using the Digital Services after the effective date of any change, you confirm your agreement to the change.</p>
+                        
+                        <h1>Accessing the Digital Services</h1>
+                        <p>To access the Digital Services, you must:<br/>
+                        • Have an active Wholesale Product or Service; <br/>
+                        • Follow the online enrollment and activation process. This includes selection of a digital banking login ID and Password; and<br/>
+                        • Have the necessary hardware and software (see "Hardware and Software Requirements" below). <br/>
+                        You must use your digital login ID and Password to access the Digital Services. We may act on any instructions we receive under your Password. You are bound by those instructions, regardless of: 
+                            (1) whether you have authorized the instructions; and (2) the number of signatures or authorizations otherwise required for your Wholesale Product or Service. You must also comply with any other security procedures that we may establish. These additional security procedures may require special hardware, software or third-party services. They may also include the activation of certain Internet browser software features, plug-ins, or add-ons.</p>
+                        
+                        <h1>Fees</h1>
+                        <p>Your Banking Contracts disclose or reference any fees charged for using the Digital Services. Additionally, your Internet service provider or wireless service provider (such as your cellular 
+                            telephone carrier) may charge you fees or other costs for sending or receiving Communications by email or text message. You agree that you are responsible for all such fees and costs.</p>
+                        <h1>Contacting TCF</h1>
+                        <p>If you have questions or problems with the Digital Services, please contact us pursuant to the contact information provided in the "Contact Us" link in the Digital Services.</p>
+                        
+                        <h1>Consent to Electronic Delivery of Communications</h1>
+                        <p>By consenting to these Terms, you agree that we may, at our option, provide Communications to you relating to your Wholesale Products and Services and/or to your use of the Digital Services in 
+                            electronic form. We may do so by: (1) sending the Communication to the email address(es) you provide to us and we maintain in our records; (2) sending you an email, text message, or push 
+                            notification to the telephone number(s) you provide to us for your mobile device(s); or (3) posting the Communication on the applicable Digital Services internet site or mobile application. <br/>
+                        By agreeing that we may provide Communications to you in electronic form, you also agree that we are not required to provide you with a paper version of the Communication. You agree that a
+                            Communication is considered “delivered” to you and received by you on the date it is posted, made available, or sent to you as provided in these Terms.</p>
+                        
+                        <h1>Communications on Your Phone or Mobile Device</h1>
+                        <p>Except as stated below, you agree that we may contact you in connection with your Wholesale Products and Services, the Digital Services and other products and services provided by TCF on your 
+                            present or future: (1) residential or business landline telephone; (2) personal or business wireless telephone; or (3) other wireless device. We may contact you by voice telephone call, voice 
+                            message, text message, email, push notification or other form of communication. You agree that we may use an automatic telephone dialing system or an artificial or prerecorded voice to contact 
+                            you at the telephone number(s) you have provided to us. <br/>
+                        Your agreement in this section also extends to third parties that may initiate calls or send messages on our behalf, including our vendors, third-party service providers, companies with which we
+                            may have joint marketing agreements, and any party to whom we sell your Wholesale Product or Service.
+                        You will be responsible for any charges you incur for these calls and messages and understand that they may deplete any free or prepaid minutes. If you want to stop receiving communications from us
+                            to any email, landline or wireless device, you must notify us.</p>
+                        <h1>Updating Your Contact Information</h1>
+                        <p>You agree that you will notify us of any changes in your email address(es) or telephone number(s).</p>
+                        <h1>Hardware and Software Requirements</h1>
+                        <p>In order to access the Digital Services and retain Communications provided or made available to you in electronic form, your computer and mobile device (if applicable) must be compatible with 
+                            the current hardware and software requirements we and any Technology Provider establish for use of the Digital Services. These requirements include: (i) the ability to operate the most recent 
+                            or prior version of Windows, mac OS X, iOS, or Android; (ii) an operating system that supports the most recent or prior version of Microsoft Edge, Mozilla Firefox, Safari, or Google Chrome. For
+                            some uses of the Digital Services, you will need Adobe Acrobat Reader version 11.0 or higher and JavaScript. In addition, your computer will need to include a router, modem, or browser that 
+                            supports Secure Sockets Layer (“SSL”) Protocol and Internet access with 2048 bit encryption; or you will need a mobile device with Internet access that supports automated (SMS) text message 
+                            service capabilities and/or supports either: (1) mobile browser with SSL Protocol; or (2) Apps for iOS available from the iTunes Store and/or Apps for Android available from the Google Play 
+                            Store. You are responsible for the setup and maintenance of your own equipment to satisfy these hardware and software requirements and all related expenses. <br/>
+                        By consenting, you confirm that you have the ability to view Communications electronically and that the device you intend to use for the Digital Services meets the requirements described in these 
+                            Terms. For maximum security and optimal function, always use the latest version of software. Beta versions of browsers and operating systems are not recommended or supported.
+                        If a change in hardware or software requirements is needed for you to access the Digital Services, we will notify you of the revised requirements.</p>
+                        
+                        <h1>Alerts and Reminders</h1>
+                        <p>If any of your Digital Services include the option for Alerts and Reminders, you must enroll for them within the applicable Digital Services application or through your Banking Contract, as
+                            applicable. By enrolling for Alerts and Reminders, you agree to receive Alerts and Reminders through email, text messages, push notification, and/or display through the Digital Services 
+                            application. If you want to stop receiving Alerts and Reminders, you agree to unenroll through the applicable Digital Services application or per the terms of your Banking Contract, as 
+                            applicable.
+                        Although Alerts and Reminders are designed to give you notice of specific events, we do not guarantee immediate notice. Errors, interruptions, delays or failures in our delivery, or your receipt of
+                            Alerts and Reminders can happen for a variety of reasons. These reasons may include technical difficulties experienced by us, your Internet service provider, wireless service provider, or others.
+                            If you choose to have your Alerts and Reminders delivered to a mobile device, keep in mind that a portion of the Alerts and Reminders or related information and disclaimers may be omitted.
+                        If you use or rely on the Alerts and Reminders, you do so at your own risk. We do not guarantee that the Alerts and Reminders will be: (1) timely; (2) accurate; (3) reliable; or (4) complete. We also do 
+                            not guarantee that information contained in the Alerts and Reminders will not be intercepted by an unauthorized person.</p>
+                        
+                        <h1>Mobile Application</h1>
+                        <p>Some of our Digital Services may not be available through mobile applications. When Digital Services are available through our mobile applications, we may use abbreviations of defined terms for Communications
+                            we send by automated (SMS) text message, push notifications, and/or display on the mobile applications due to space limitations. The number of transactions that we can display using our mobile applications
+                            for Digital Services mobile application may be limited. <br/>
+                        One or more of the mobile applications for Digital Services may allow you to log in using the biometric authentication technology if your mobile device has this technology enabled. Biometric authentication may
+                            include, but is not limited to, fingerprint, facial recognition, or voice. If one of our mobile applications has this option, you may enable or disable the available biometric login features at any time within
+                            the mobile settings of the application. If you enable the biometric login feature on the application, anyone with a biometric setup on your device will be able to log in to the application and access your
+                            Digital Services. Do not use the biometric login features if you share your mobile device with others.</p>
+                        
+                        <h1>Availability and Termination of Digital Services</h1>
+                        <p>The Digital Services generally are available 24 hours a day, seven days a week. However, the Digital Services may not be available at certain times because of: (1) system maintenance and downtime; (2) 
+                            circumstances beyond our control; or (3) other reasons. Digital Services may not be available in all countries outside the United States. Although certain Digital Services and certain Communications, such as the 
+                            Alerts and Reminders, are designed to give you timely notice of specific events, we do not guarantee immediate notice. Errors, interruptions, delays or failures in the Digital Services and/or our delivery or your
+                            receipt of Communications happen for a variety of reasons. These reasons may include technical difficulties experienced by us, your internet service provider, your wireless service provider, or others. <br/>
+                        We may temporarily or permanently change, suspend, or terminate your access to the Digital Services at any time and for any reason without notifying you beforehand. Immediately upon such termination, you shall have
+                            no further right, title or interest in or to the Digital Services or any part thereof. The Digital Services are available through your computer or mobile device only when it is connected to the Internet. <br/>
+                        You may unenroll in the Digital Services at any time by contacting us. These Terms will survive (continue in full force and effect) if you unenroll from or we terminate any of the Digital Services.</p>
+                        
+                        <h1>Transactions</h1>
+                        <p>If any of your Digital Services permit you to initiate transactions, we do not have to honor, in whole or in part, any transaction that: (1) does not comply with these Terms, your Banking Contract or applicable
+                            security procedures; (2) we have reason to believe may not be authorized by the Customer; (3) involves funds or other property subject to a hold, dispute, restriction or legal process; (4) we believe would
+                            violate any guidelines or advice of the Federal Reserve Board, the Office of the Comptroller of the Currency, or other regulatory agency with jurisdiction over us; (5) we believe would violate any applicable 
+                            laws; (6) does not comply with any requirement of our policies, procedures, or practices; or (7) we have other reasonable cause not to honor. </p>
+                        
+                        <h1>Multiple Users of the Digital Services</h1>
+                        <p>Generally, any authorized representative of the Customer for any Wholesale Product or Service may enroll in and use the Digital Services relating to such Wholesale Product or Service. We may reasonably rely 
+                            on representations made by individuals that they are authorized to use the Digital Services on behalf of a Customer for the related Wholesale Product or Service. In our sole discretion, we may limit the number 
+                            of users of the Digital Services for any one Customer or Wholesale Product or Service. The Customer for any Wholesale Product or Service agrees to monitor the individuals accessing the Digital Services on
+                            behalf of such Customer and to notify us within 48 hours of a change in if any individual's responsibilities or departure from the Customer that warrants removal of such individual as a user of the Digital Services.</p>
+                        
+                        <h1>Digital Banking Security:</h1>
+                        <h2>Protecting Your Password and Wholesale Product and Service Information</h2>
+                        <p>You agree to use reasonable care in handling, safeguarding, and storing: (1) your Password; (2) your Wholesale Product and Service information; and (3) any computer or device you use to access the Digital Services. 
+                            You should not give your Password to anyone. If you give your Password to someone else, you are giving that person permission to utilize the Digital Services. For security reasons, we recommend that you
+                            memorize your Password and do not write it down. You should change it frequently. <br/>
+                        You are responsible for entering information correctly. We are not liable if you provide us with incorrect data or incorrectly enter information, resulting in inaccurate Communications or Communications being 
+                            sent to unauthorized persons. <br/>
+                        You agree that you will immediately contact us using the telephone number or email address shown in the “Contact Us” link of the Digital Services if: (1) your Password is lost, may no longer be secret, or has
+                            been compromised in any way; (2) you have given your Password to someone else and that person no longer has your permission to access the Digital Services; (3) your computer or device is lost or stolen; 
+                            (4) your email or mobile device contact information changes; or (5) you become aware that the Digital Services are used fraudulently. Contacting us by telephone is the best way to resolve your issue. You
+                            agree to cooperate with us in any investigation and to take any fraud prevention actions that we ask you to take. <br/>
+                        Except when the law or these Terms provide otherwise, we are not liable for your errors or negligent use of the Digital Services, and we will not be responsible for or cover losses due to: <br/>
+                        • Misuse of the Digital Services; <br/>
+                        • Input errors; <br/>
+                        • Unauthorized access to the Digital Services resulting from your negligence (carelessness). Examples of this include sharing your Password, writing it down, storing it in your computer or device, or entering
+                            it in a way that allows others to see it; <br/>
+                        • Leaving your computer or device unattended while using the Digital Services; <br/>
+                        • Failure to report promptly unauthorized access to the Digital Services; <br/>
+                        • Viruses. Many virus protection/firewall programs are available commercially to help you reduce, but not eliminate, this risk; or <br/>
+                        • Unauthorized interception of, or access to, the Communications.
+                        <br/>Anyone with access to your email or devices also may be able to access Communications or the Digital Services. It is your responsibility to safeguard these devices and protect your Password.</p>
+                        
+
+                        <h1>Security of Information</h1>
+                        <p>You assume all risk that any communication you receive from us using a wireless connection or store in your computer or device may be accessed by unauthorized third parties. Any 
+                            communication that you send us or that we send 
+                            you may not be encrypted. These may include your name and other information pertaining to your Wholesale Products and Services.<br/>
+                        You authorize us to monitor and record your calls to us concerning your Wholesale Products and Services and the Digital Services. We have the right to intercept and disclose any messages 
+                            or other communications if we believe
+                            it is necessary to protect our rights or property, or to protect others from injury or damage. We reserve the right to take any appropriate action if we become aware of any use of the 
+                            Digital Services that we believe violates any law, these Terms, or is otherwise wrongful.</p>
+                        
+                        <h1>Ownership; Restrictions on Use and Disclosure of Information</h1>
+                        <p>Except as otherwise expressly stated, all of the information and content included in the Digital Services are owned and controlled by TCF and/or a TCF-Related Party, and all content (the design, text,
+                            images, graphics and arrangement of them) is copyrighted by TCF and/or a TCF-Related Party. You are provided access to the Digital Services solely for purposes of viewing and downloading information solely for your internal business purposes in connection with your business relationship with TCF and in accordance with all applicable laws. By agreeing to these Terms, accessing the Digital Services, downloading any information or otherwise, you do not acquire any ownership rights or any other rights in any information or any other content or information contained in the Digital Services. You expressly agree to (i) keep all such information strictly confidential and not copy or disclose or disseminate such information to anyone except employees, officers, directors and advisors of the applicable Customer with a need to know in connection with such Customer's business relationship with TCF, and (iii) take reasonable precautions to avoid the unauthorized disclosure or use of such information.</p>
+                        
+                        <h1>Information Sharing among TCF and TCF-Related Parties</h1>
+                        <p>When you interact with us with respect to any Wholesale Product and Service and/or the Digital Services, we may collect information about you and how you use our Wholesale Products and Services and
+                            Digital Services. Except to the extent provided by applicable law, information we obtain in connection with or related to your use of any Wholesale Product and Service or the Digital Services is
+                            non-confidential, and we are entitled to the unrestricted use of such information, including developing, producing and marketing products and services, in our sole discretion regardless of any
+                            proprietary claims or reservations of rights you may assert, and without acknowledgment or compensation to you.<br/>
+                        Notwithstanding anything to the contrary set forth in any agreement between you and TCF and/or a TCF-Related Party, we may share your information on a confidential basis among TCF, its Affiliates,
+                            and the TCF-Related Parties and with other third parties when necessary for the operation of our business and/or to provide the Wholesale Products and Services and Digital Services to you and for other
+                            lawful purposes. For example, we share information in order to protect against fraud, respond to subpoenas, and to provide you with products and services. In certain circumstances, we also may share with
+                            our vendors and sources information about our transactions and experiences with our Customers.<br/>
+                        Please also see our TCF Online Privacy and Security Policy.</p>
+                        
+                        <h1>Third Party Links</h1>
+                        <p>The Digital Services may contain links to websites owned or controlled by third parties not affiliated with TCF. TCF disclaims responsibility for any third-party’s website content, products, privacy policies
+                            , or security, notwithstanding that the third-party’s website may be linked to the Digital Services. Any advice, opinions, or recommendations in third-party websites are those of the providers and not TCF.
+                            In the event you choose to use the services available at or through a third-party’s website, you agree to read and adhere to the policies and terms of use applicable to that site. Your participation in any
+                            third-party website, including payment for and the delivery of goods or services, is based solely on the agreement, if any, between you and the third-party provider.</p>
+                        
+                        <h1>Disclaimer of Warranties and Limits of Liability</h1>
+                        <p>The Digital Services are provided to you “as-is.” TCF and the TCF-Related Parties make no warranties of any kind with respect to the Digital Services. This includes both express warranties and implied warranties.
+                        Implied warranties include implied warranties of merchantability and fitness for a particular purpose. A “warranty” is a guarantee that the Digital Services will meet certain standards.
+                        TCF and the TCF-Related Parties do not warrant that the Digital Services will be uninterrupted or error free, or that defects will be corrected. TCF and the TCF-Related Parties also do not warrant that
+                            Digital Services sites are free of viruses or other harmful components. TCF and the TCF-Related Parties also do not warrant the timeliness, accuracy, reliability or completeness of the Digital Services or Communications.<br/>
+                        TCF and the TCF-Related Parties will not be liable to you for any loss, claim, injury, or damage (collectively, "Loss") in connection with: (1) these Terms; (2) your use of the Digital Services or inability 
+                        to use the Digital Services; (3) any problems with the communications between you and us; (4) any unauthorized interception of the communications between you and us; (5) any computer virus; or (6) the actions 
+                        or inactions of the Technology Providers or other third parties except to the extent that the gross negligence or willful misconduct of TCF or the TCF-Related Party (as applicable) solely caused such Loss.
+                            This limitation on TCF and the TCF-Related Parties’ liability applies, even if any of them are aware of the possibility that any events described in (1) through (6) could occur.<br/>
+                        In no event will TCF or any of the TCF-Related parties be liable to you for any: (1) incidental damages; (2) consequential damages; (3) special damages; (4) indirect damages; or (5) punitive damages. 
+                        This limitation of liability applies, whether you base an action against TCF or the TCF-Related Parties on: (a) the contract; (b) a warranty; (c) a tort (such as claim of negligence, recklessness, 
+                        or intentional act); or (d) any other theory. This limitation of liability applies even if TCF or any of the TCF-Related Parties know about the possibility of such damages. Therefore, by way of example,
+                        TCF and the TCF-Related Parties will not be liable to you for lost data, lost profits or goodwill, investment losses, finance charges, lost opportunities, cost of obtaining substitute services, or other
+                        economic damages. Notwithstanding any other provision of these Terms and without limiting the scope of the foregoing limitation of liability provision, the aggregate damages that may be recovered by
+                        you in connection with the Digital Services and/or these Terms may not exceed $500. You acknowledge that we have relied upon the limitation of liability set forth in these Terms and, but for the inclusion
+                            of this limitation of liability, we would not provide the Digital Services.<br/>
+                        The laws of some states may prohibit the limitation of liability for consequential damages, or incidental damages, or other kinds of damages. In those states, to the extent their laws apply, the limitation
+                        of liability with respect to consequential damages, or incidental damages (or other damages specified by law in such states), may not apply. In no event will we be liable for any failure of availability or
+                            performance due to scheduled system maintenance or circumstances beyond our control. This includes power outages, computer viruses, system failures, fire, flood, earthquakes, or extreme weather.<br/>
+                        The information provided to you pursuant to the Digital Services does not constitute advice, an offer to buy or sell, or a solicitation of business. Before acting on any information, you should consider
+                        your or your company's needs, objectives and financial considerations. Banking products or services mentioned or featured within the Digital Services may or may not be suitable for you or your company and
+                            may not be available to all customers in all geographic areas, and your or your company's eligibility for particular products or services is subject to approval or acceptance by us.</p>
+                        
+                        <h2>Indemnification</h2>
+                        <p>You agree to indemnify, defend, and hold TCF and the TCF-Related Parties harmless from any and all actions, suits, claims, damages, losses, liabilities, penalties, assessments, charges, taxes, 
+                            costs and expenses (including reasonable attorneys’ fees, costs of investigation and court costs at the trial level and in any appeal) (together, the "Losses") directly or indirectly arising from 
+                            or relating to: (1) your use of the Digital Services; (2) any fraud, misrepresentation, or breach by you of these Terms; or (3) your failure to comply with any applicable laws or regulations;
+                            provided, however, that you shall not be obligated to indemnify TCF or any TCF-Related Parties for any Losses to the extent that such Losses are caused solely by the gross negligence or willful
+                            misconduct of TCF or the TCF-Related Party (as applicable).</p>
+                        
+                        <h2>No Waiver</h2>
+                        <p>This Agreement gives us certain rights. If we do not take advantage of all of our rights all the time, we do not give up (waive) any of those rights. No waiver of our rights under these Terms is 
+                            enforceable against us unless it is in writing and signed by us.</p>
+                        
+                        <h2>Entire Agreement; Severability</h2>
+                        <p>This Agreement and the terms of your Banking Contracts comprise the entire agreement between you, TCF and the TCF-Related Parties concerning the Digital Services and online and mobile access to 
+                            your Wholesale Products and Services, and they replace all previous and contemporaneous agreements between you and us concerning the Digital Services and online and mobile access to your Wholesale
+                            Products and Services. If there is any conflict between these Terms and applicable federal or state law or regulation, these Terms will be considered changed to the extent necessary to comply with 
+                            the law. If any provision in these Terms is declared to be invalid, unenforceable or illegal by any adjudicatory body of competent jurisdiction or any governmental regulatory agency, such provision
+                            shall be construed as being severed from these Terms and shall not affect the validity or enforceability of the remaining provisions. Any provision of these Terms found invalid or unenforceable only 
+                            in part or degree will remain in full force and effect to the extent not found invalid or unenforceable.</p>
+                        <h2>Captions and Headings</h2>
+                        <p>Captions, headings and subheadings used in these Terms are only for reference purposes and are not intended to limit the meaning or scope of these Terms.</p>
+                        
+                        <h2>Governing Law</h2>
+                        <p>TCF is a national bank with its main office in South Dakota. Therefore, all disputes relating in any way to these Terms will be governed by federal law. Federal law includes the National Bank Act
+                            and regulations adopted by the Comptroller of the Currency. TCF operates and controls the Digital Services from its offices in Minnesota, USA, and agreement to these Terms is made in the State of Minnesota.
+                            These Terms and your access to and use of the Digital Services are governed by and will be construed in accordance with applicable federal law and the law of the State of Minnesota, without regard to
+                            the principles of conflicts of laws. All actions, claims or disputes arising under or relating to these Terms or the Digital Services shall be brought in the federal or state courts in the State of
+                            Minnesota. You and we irrevocably submit and consent to the exercise of subject matter jurisdiction and personal jurisdiction over each party by the federal and/or state courts in the State of Minnesota.
+                            You and we hereby irrevocably waive any and all objections which any party may now or hereafter have to the exercise of personal and subject matter jurisdiction by the federal or state courts in the
+                            State of Minnesota and to the venue of any such suit, action or proceeding brought in any such federal or state court in the State of Minnesota. You and we hereby waive any right to a trial by jury in any
+                            action or proceeding, regardless of the theory of law on which it is based, arising from or related to these Terms or the Digital Services.</p>
+
+
+                         
+                        
+                    </div>
+                    <!--###### MODAL BOX FOOTER Part Start ######-->
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="brand" 
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModal }"/>
+                   </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+            <!--###### MODAL BOX Part END Here ######-->
+            
+        </aura:if>
+    </div>
+</aura:component>
